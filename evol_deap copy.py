@@ -22,7 +22,6 @@ toolbox = base.Toolbox()
 toolbox.register("individual", init_cycle, creator.Individual, np.random.uniform, n=4)
 # Population should take into account the bounds
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
-toolbox.register("mate", tools.cxBlend, alpha=0.5)
 toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.2)
 toolbox.register("select", tools.selTournament, tournsize=3)
 
@@ -59,6 +58,63 @@ def feasibility(individual):
 
 # Agregar restricciones a la función de aptitud 
 # NO PUEDE SER DIRECTAMENTE EN EL REGISTRO?
-toolbox.decorate("mate", tools.DeltaPenalty(feasibility, delta=1.0))
-toolbox.decorate("mutate", tools.DeltaPenalty(feasibility, delta=1.0))
+#Función de mutación personalizada
+def custom_mutate(ind, sigma):
+    tau = 1/(np.sqrt(2*np.sqrt(len(ind))))
+    tau_prime = 1/(np.sqrt(2*len(ind)))
+    r = np.random.normal(0, 1, len(ind))
+    child_sigma = sigma * np.exp(tau * r + tau_prime * r)
 
+    r = np.random.normal(0, 1, len(ind))
+    child_value = np.copy(ind) + child_sigma * r
+
+    # Aplicar restricciones aquí si es necesario
+
+    return child_value, child_sigma
+
+# Registrar la función de mutación personalizada
+toolbox.register("mutate", custom_mutate)
+# Agregar la función de aptitud al toolbox
+toolbox.register("evaluate", pressure_vessel)
+
+def main():
+    pop = toolbox.population(n=10)
+    CXPB, MUTPB, NGEN = 0.5, 0.2, 5
+
+    # Evaluate the entire population
+    fitnesses = map(toolbox.evaluate, pop)
+    for ind, fit in zip(pop, fitnesses):
+        ind.fitness.values = fit
+        print('o')
+
+    for g in range(NGEN):
+        # Select the next generation individuals
+        offspring = toolbox.select(pop, len(pop))
+        # Clone the selected individuals
+        offspring = map(toolbox.clone, offspring)
+
+        # Apply crossover and mutation on the offspring
+        for child1, child2 in zip(offspring[::2], offspring[1::2]):
+            if np.random.random() < CXPB:
+                toolbox.mate(child1, child2)
+                del child1.fitness.values
+                del child2.fitness.values
+
+        for mutant in offspring:
+            if np.random.random() < MUTPB:
+                toolbox.mutate(mutant)
+                del mutant.fitness.values
+
+        # Evaluate the individuals with an invalid fitness
+        invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
+        fitnesses = map(toolbox.evaluate, invalid_ind)
+        for ind, fit in zip(invalid_ind, fitnesses):
+            ind.fitness.values = fit
+
+        # The population is entirely replaced by the offspring
+        pop[:] = offspring
+
+    print(pop)
+
+if __name__ == "__main__":
+    main()
