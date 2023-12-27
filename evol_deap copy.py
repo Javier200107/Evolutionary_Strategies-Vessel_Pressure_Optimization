@@ -28,7 +28,6 @@ def init_individual(icls, scls):
 # Registrar operadores específicos de tu problema
 toolbox = base.Toolbox()
 toolbox.register("individual", init_individual, creator.Individual, creator.Strategy)
-# Population should take into account the bounds
 toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 toolbox.register("mutate", tools.mutGaussian, mu=0, sigma=1, indpb=0.2)
 toolbox.register("select", tools.selTournament, tournsize=3)
@@ -55,9 +54,36 @@ def feasibility(individual):
     return not any(g > 0 for g in constraints(individual))
 
 def distance(individual):
-    ls_constraints = constraints(individual)
     if any(g > 0 for g in constraints(individual)):
         return 100000000
+    
+def plot_statistics(logbook):
+    gen = logbook.select("gen")
+    fit_mins = logbook.select("min")
+    size_avgs = logbook.select("avg")
+
+    import matplotlib.pyplot as plt
+
+    fig, ax1 = plt.subplots()
+    line1 = ax1.plot(gen, fit_mins, "b-", label="Minimum Fitness")
+    ax1.set_xlabel("Generation")
+    ax1.set_ylabel("Fitness", color="b")
+    for tl in ax1.get_yticklabels():
+        tl.set_color("b")
+
+    ax2 = ax1.twinx()
+    line2 = ax2.plot(gen, size_avgs, "r-", label="Average Size")
+    ax2.set_ylabel("Size", color="r")
+    for tl in ax2.get_yticklabels():
+        tl.set_color("r")
+
+    lns = line1 + line2
+    labs = [l.get_label() for l in lns]
+    ax1.legend(lns, labs, loc="center right")
+
+    plt.show()
+    # Save the figure
+    fig.savefig('min_vs_avg.png', bbox_inches='tight')
 
 """def feasibility(individual):
     #return sum(1 for g in constraints(individual) if g > 0)
@@ -102,10 +128,12 @@ toolbox.decorate("evaluate", tools.DeltaPenalty(feasibility, delta=7.0, distance
 stats = tools.Statistics(lambda ind: ind.fitness.values)
 stats.register("avg", np.mean)
 stats.register("min", np.min)
+stats.register("max", np.max)
+stats.register("std", np.std)
 
 # Algoritmo de Estrategias Evolutivas (ES)
 MU, LAMBDA_ = 1000, 1000
-CXPB, MUTPB, NGEN = 0.6, 0.3, 5000
+MUTPB, NGEN = 0.9, 5000
 
 # Población inicial
 pop = toolbox.population(n=MU)
@@ -126,3 +154,22 @@ print("Valor de aptitud (Worst):", np.max([ind.fitness.values[0] for ind in pop]
 
 print("Variables del individuo:", best_ind)
 print("Constraints:", constraints(best_ind))
+
+import pickle
+
+# Guardar el logbook en un archivo binario
+with open('logbook.pkl', 'wb') as file:
+    pickle.dump(logbook, file)
+
+plot_statistics(logbook)
+
+
+"""The optimization problem setup requires instantiating a Fitness Class with negatives weights, which indicate the direction in which the optimization algorithm should search for solutions. We want to achieve a solution that minimizes the value of the fitness value so we can reduce material costs. 
+In evolutionary algorithms, a solution to the optimization problem is represented as an individual. In our code, Individual is defined as a NumPy array containing the values for each vessel design variable. The Strategy class is introduced to represent the evolutionary strategy, which guides how the individuals evolve over generations. 
+
+2. Problem Initialization
+
+The initialization of the problem is done by registering the necessary functions and classes in the DEAP toolbox. 
+The toolbox is a container for the evolutionary operators. The toolbox is used by the algorithms to apply the operators to the individuals. 
+The toolbox is also used to define the population of individuals. Our individuals will be initialized with  
+"""

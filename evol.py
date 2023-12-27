@@ -181,12 +181,6 @@ def evolutionary_programming(init_gen, init_sigma, bounds, fitness_function, con
         # get indices of bad solutions, aka when number of constraints broken
         # is not equal to 0
         bad = np.where(con[:,0] != 0)[0].tolist()
-        print('bad', bad)
-        print('suuuu',(con[:,0] != 0)[0])
-        print('con', con)
-        print('con', con.shape)
-        if k == 1:
-            exit()
         # if has constraints broken, we returned the difference by how much
         # it was broken, so here we get those differences
         violated_con = con[bad][:, 1:]
@@ -262,7 +256,7 @@ def evolutionary_programming(init_gen, init_sigma, bounds, fitness_function, con
     return (best_fit[max_iter-1])
 
 
-size = 1000
+size = 100
 
 # pressure vessel
 upper_bound = [6.1875, 6.1875, 200, 240]
