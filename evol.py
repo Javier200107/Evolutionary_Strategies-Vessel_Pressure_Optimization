@@ -134,19 +134,7 @@ def evolutionary_programming(init_gen, init_sigma, bounds, fitness_function, con
     sigma = np.copy(init_sigma)
     n, c = gen.shape
     tourn_size = int(0.2*n)
-    # weld beam
-    temp = [[0.245500, 6.196000, 8.273000, 0.245500],
-    [0.244438276, 6.2379672340, 8.2885761430, 0.2445661820],
-    [0.2442, 6.2231, 8.2915, 0.2443],
-    [0.223100, 1.5815, 12.84680, 0.2245],
-    [0.24436895, 6.21860635, 8.29147256, 0.24436895],
-    [0.24436198, 6.21767407, 8.29163558, 0.24436883]]
-    # compress string
-    #temp = np.asarray([[0.051689156131, 0.356720026419, 11.288831695483 ],
-    #[0.051749, 0.358179, 11.203763],
-    #[0.051515, 0.352529, 11.538862],
-    #[0.051688, 0.356692, 11.290483 ]])
-    #constraints(temp)
+
     for k in range(0, max_iter):
         '''
         p1 = np.random.choice(range(0, n), n)
@@ -193,6 +181,12 @@ def evolutionary_programming(init_gen, init_sigma, bounds, fitness_function, con
         # get indices of bad solutions, aka when number of constraints broken
         # is not equal to 0
         bad = np.where(con[:,0] != 0)[0].tolist()
+        print('bad', bad)
+        print('suuuu',(con[:,0] != 0)[0])
+        print('con', con)
+        print('con', con.shape)
+        if k == 1:
+            exit()
         # if has constraints broken, we returned the difference by how much
         # it was broken, so here we get those differences
         violated_con = con[bad][:, 1:]
@@ -287,7 +281,7 @@ for i in range(0, 50):
     print('init_gen1', init_gen)
     for i in range(0, c):
         init_gen[:, i] = np.random.uniform(lower_bound[i], upper_bound[i], size)
-        exit()
+        #exit()
         sigmas[:, i] = np.random.uniform(0.01 * total_bound[i], 0.2 * total_bound[i], size)
 
     best_fit = evolutionary_programming(init_gen=init_gen, init_sigma=sigmas, bounds=bounds,
