@@ -133,7 +133,7 @@ stats.register("std", np.std)
 
 # Algoritmo de Estrategias Evolutivas (ES)
 MU, LAMBDA_ = 1000, 1000
-MUTPB, NGEN = 0.9, 5000
+MUTPB, NGEN = 0.9, 00
 
 # Población inicial
 pop = toolbox.population(n=MU)
