@@ -56,7 +56,6 @@ def feasibility(individual):
 
 def distance(individual):
     ls_constraints = constraints(individual)
-    print('ls_constraints', ls_constraints)
     if any(g > 0 for g in constraints(individual)):
         return 100000000
 
@@ -105,8 +104,8 @@ stats.register("avg", np.mean)
 stats.register("min", np.min)
 
 # Algoritmo de Estrategias Evolutivas (ES)
-MU, LAMBDA_ = 10, 100
-CXPB, MUTPB, NGEN = 0.6, 0.3, 50
+MU, LAMBDA_ = 1000, 1000
+CXPB, MUTPB, NGEN = 0.6, 0.3, 5000
 
 # Población inicial
 pop = toolbox.population(n=MU)
@@ -114,10 +113,16 @@ pop = toolbox.population(n=MU)
 pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA_,
                                           cxpb=0, mutpb=MUTPB, ngen=NGEN, stats=stats,
                                           halloffame=None, verbose=True)
-
 # Muestra de resultados
 print("Mejor individuo después de", NGEN, "generaciones:")
 best_ind = tools.selBest(pop, 1)[0]
-print("Valor de aptitud:", best_ind.fitness.values[0])
+# Get the median of the population
+print("Valor de aptitud (Min):", best_ind.fitness.values[0])
+arr_fitness = [ind.fitness.values[0] for ind in pop]
+arr_fitness = [x for x in arr_fitness if x < 100000000]
+print("Valor de aptitud (Mean):", np.mean(arr_fitness))
+print("Valor de aptitud (Worst):", np.max([ind.fitness.values[0] for ind in pop]))
+
+
 print("Variables del individuo:", best_ind)
 print("Constraints:", constraints(best_ind))
