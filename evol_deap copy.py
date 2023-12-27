@@ -56,6 +56,7 @@ def feasibility(individual):
 
 def distance(individual):
     ls_constraints = constraints(individual)
+    print('ls_constraints', ls_constraints)
     if any(g > 0 for g in constraints(individual)):
         return 100000000
 
@@ -91,6 +92,8 @@ def distance(individual):
 """# Registrar la función de mutación personalizada
 toolbox.register("mutate", custom_mutate)"""
 
+# -media / desviación estándar = delta
+# weight = 1.0 / desviación estándar
 
 # Agregar la función de aptitud al toolbox
 toolbox.register("evaluate", pressure_vessel)
