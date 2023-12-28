@@ -105,6 +105,20 @@ def plot_and_save_statistics(logbook, df_results, output_dir="output", params=No
     output_path = os.path.join(output_folder, 'min_vs_avg.png')
     fig.savefig(output_path, bbox_inches='tight')
 
+    # Boxplot of the best and mean fitness values
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.boxplot([df_results["Best Fitness"], df_results["Mean Fitness"], df_results["Median Fitness"]], 
+               labels=["Best Fitness", "Mean Fitness", "Median Fitness"])
+    ax.set_title("Boxplot of Best, Mean and Median Fitness Values")
+    ax.set_ylabel("Fitness")
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    # Save the figure in the output folder
+    output_path = os.path.join(output_folder, 'boxplot.png')
+    plt.savefig(output_path, bbox_inches='tight')
+
     # Save the results to a CSV file
     df_results.to_csv(f'{output_folder}/results.csv', index=False)
 
@@ -116,6 +130,37 @@ def plot_and_save_statistics(logbook, df_results, output_dir="output", params=No
 
 if __name__ == "__main__":
     import pandas as pd
+    # Evolutionary Strategies (ES) Algorithm parameters
+    import argparse
+
+    # Create the parser
+    parser = argparse.ArgumentParser(description="Set parameters for the experiment.")
+
+    # Add arguments
+    parser.add_argument("--mu", type=int, default=1000, help="Value for MU (default: 1000)")
+    parser.add_argument("--lambda_", type=int, default=1000, dest="lambda_", help="Value for LAMBDA_ (default: 1000)")
+    parser.add_argument("--mutpb", type=float, default=0.8, help="Value for MUTPB (default: 0.8)")
+    parser.add_argument("--ngen", type=int, default=100, help="Value for NGEN (default: 100)")
+    parser.add_argument("--elitism_ratio", type=float, default=0.1, help="Value for ELITISM_RATIO (default: 0.1)")
+    parser.add_argument("--tournament_size", type=int, default=10, help="Value for TOURNAMENT_SIZE (default: 10)")
+    parser.add_argument("--n_experiments", type=int, default=3, help="Number of experiments to run (default: 3)")
+
+    # Parse the arguments
+    args = parser.parse_args()
+
+    # Assign variables
+    MU, LAMBDA_ = args.mu, args.lambda_
+    MUTPB, NGEN = args.mutpb, args.ngen
+    ELITISM_RATIO = args.elitism_ratio
+    TOURNAMENT_SIZE = args.tournament_size
+    N_EXPERIMENTS = args.n_experiments
+
+    # Calculate ELITISM
+    ELITISM = int(LAMBDA_ * ELITISM_RATIO)
+
+    # Example usage in the terminal:
+    # python script_name.py --mu 1000 --lambda_ 1000 --mutpb 0.8 --ngen 50 --elitism_ratio 0.1 --tournament_size 10 --n_experiments 3
+
 
     # Define the problem as a minimization fitness problem
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -128,7 +173,7 @@ if __name__ == "__main__":
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
     toolbox.decorate("mutate", checkStrategy([0.1, 0.1, 1, 1]))
-    toolbox.register("select", tools.selTournament, tournsize=10)
+    toolbox.register("select", tools.selTournament, tournsize=TOURNAMENT_SIZE)
 
     # Register the evaluation function and apply penalty for infeasibility
     toolbox.register("evaluate", pressure_vessel)
@@ -144,15 +189,6 @@ if __name__ == "__main__":
     stats.register("median", partial(filter_infeasible, function=np.median))
     stats.register("feasibles", partial(filter_infeasible, function=len))
     stats.register("unique_ind", partial(filter_infeasible, function=lambda x: len(np.unique(x))))
-
-    # Evolutionary Strategies (ES) Algorithm parameters
-    MU, LAMBDA_ = 1000, 1000
-    MUTPB, NGEN = 0.8, 1000
-    ELITISM_RATIO = 0.1
-    ELITISM = int(LAMBDA_*ELITISM_RATIO)
-
-    # Define the number of times the experiment is to be run
-    N_EXPERIMENTS = 3  # Replace 'N' with the desired number of experiments
 
     # List to store the results of each experiment
     all_experiments_results = []
@@ -222,7 +258,8 @@ if __name__ == "__main__":
     # Convert the list of results to a DataFrame
     df_results = pd.DataFrame(all_experiments_results).sort_values(by="Best Fitness", ascending=True).reset_index(drop=True)
     best_result_id = df_results.loc[0, "Experiment"] - 1
-    d_params = {"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO}
+    d_params = {"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO,
+                "TOURNAMENT_SIZE": TOURNAMENT_SIZE}
 
     ls_measures_cols = ['Best Fitness', 'Mean Fitness', 'Median Fitness', 'Worst Fitness', 'Standard Deviation', 'Number of Unique Individuals', 'Number of Feasible Individuals', 'Number of Infeasible Individuals']
     print(df_results[ls_measures_cols].agg(['mean', 'std', 'min', 'max']).T)
