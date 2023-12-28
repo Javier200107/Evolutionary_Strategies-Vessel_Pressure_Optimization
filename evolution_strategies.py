@@ -30,7 +30,8 @@ def constraints(individual):
     g2 = -x2 + 0.00954*x3
     g3 = -np.pi*x3*x3*x4 - (4*np.pi/3)*x3*x3*x3 + 1296000
     g4 = x4 - 240
-    return [g1, g2, g3, g4]
+    g5 = - pressure_vessel(individual)[0]
+    return [g1, g2, g3, g4, g5]
 
 # Feasibility function
 def feasibility(individual):
@@ -99,13 +100,19 @@ def plot_and_save_statistics(logbook, df_results, output_dir="output", params=No
         plt.title("Fitness over Generations\n"+str_params)
     else:
         plt.title("Fitness over Generations\n ")
-        
+
     # Save the figure in the output folder
     output_path = os.path.join(output_folder, 'min_vs_avg.png')
     fig.savefig(output_path, bbox_inches='tight')
 
     # Save the results to a CSV file
     df_results.to_csv(f'{output_folder}/results.csv', index=False)
+
+    # Write the parameters to a text file
+    if params is not None:
+        with open(f'{output_folder}/params.txt', 'w') as file:
+            for key, value in params.items():
+                file.write(f"{key}: {value}\n")
 
 if __name__ == "__main__":
     import pandas as pd
@@ -121,7 +128,7 @@ if __name__ == "__main__":
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
     toolbox.register("mutate", tools.mutESLogNormal, c=1.0, indpb=0.3)
     toolbox.decorate("mutate", checkStrategy([0.1, 0.1, 1, 1]))
-    toolbox.register("select", tools.selTournament, tournsize=3)
+    toolbox.register("select", tools.selTournament, tournsize=10)
 
     # Register the evaluation function and apply penalty for infeasibility
     toolbox.register("evaluate", pressure_vessel)
@@ -140,20 +147,20 @@ if __name__ == "__main__":
 
     # Evolutionary Strategies (ES) Algorithm parameters
     MU, LAMBDA_ = 1000, 1000
-    MUTPB, NGEN = 0.8, 50
+    MUTPB, NGEN = 0.8, 1000
     ELITISM_RATIO = 0.1
     ELITISM = int(LAMBDA_*ELITISM_RATIO)
 
-    # Initial population
-    pop = toolbox.population(n=MU)
-
     # Define the number of times the experiment is to be run
-    N_EXPERIMENTS = 2  # Replace 'N' with the desired number of experiments
+    N_EXPERIMENTS = 3  # Replace 'N' with the desired number of experiments
 
     # List to store the results of each experiment
     all_experiments_results = []
-
+    ls_logbooks = []
     for experiment in range(N_EXPERIMENTS):
+        # Initial population
+        pop = toolbox.population(n=MU)
+
         print(f"\n\nExperiment {experiment + 1} of {N_EXPERIMENTS}...\n")
         # Evolutionary process and logging for each experiment
         pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA_,
@@ -173,6 +180,12 @@ if __name__ == "__main__":
         num_feasible = len(arr_fitness)
         num_infeasible = len(pop) - len(arr_fitness)
 
+        ls_logbooks.append(logbook)
+
+        if num_feasible == 0:
+            print("SKIP INFEASIBLE EXPERIMENT")
+            continue
+
         # Store the results of this experiment
         experiment_results = {
             "Experiment": experiment + 1,
@@ -186,7 +199,7 @@ if __name__ == "__main__":
             "Number of Infeasible Individuals": num_infeasible,
             "Best Individual": best_ind,
             "Constraints": constraints(best_ind),
-            "logbook": logbook,
+            # "logbook": logbook,
         }
         all_experiments_results.append(experiment_results)
 
@@ -203,12 +216,13 @@ if __name__ == "__main__":
         print("Individual variables:", best_ind)
         print("Constraints:", constraints(best_ind))
 
-
         # Plot statistics for each experiment
         # plot_and_save_statistics(logbook, params={"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO})
 
     # Convert the list of results to a DataFrame
-    df_results = pd.DataFrame(all_experiments_results).sort_values(by="Best Fitness")
+    df_results = pd.DataFrame(all_experiments_results).sort_values(by="Best Fitness", ascending=True).reset_index(drop=True)
+    best_result_id = df_results.loc[0, "Experiment"] - 1
+    d_params = {"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO}
 
     ls_measures_cols = ['Best Fitness', 'Mean Fitness', 'Median Fitness', 'Worst Fitness', 'Standard Deviation', 'Number of Unique Individuals', 'Number of Feasible Individuals', 'Number of Infeasible Individuals']
     print(df_results[ls_measures_cols].agg(['mean', 'std', 'min', 'max']).T)
@@ -216,7 +230,10 @@ if __name__ == "__main__":
     print("\n\nBest individual after", NGEN, "generations:")
     print(df_results.loc[0, :"Number of Infeasible Individuals"])
     print("Best individual variables:", df_results.loc[0, "Best Individual"])
-    best_logbook = df_results.loc[0, "logbook"]
-    plot_and_save_statistics(best_logbook, df_results, params={"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, 
-                                                               "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO})
+
+    print("\n\nParameters:")
+    print(d_params)
+
+    best_logbook = ls_logbooks[best_result_id]
+    plot_and_save_statistics(best_logbook, df_results, params=d_params)
     # Save 
