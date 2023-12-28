@@ -59,7 +59,7 @@ def checkStrategy(minstrategy):
     return decorator
     
 # Plotting statistics
-def plot_and_save_statistics(logbook, output_dir="output", params=None):
+def plot_and_save_statistics(logbook, df_results, output_dir="output", params=None):
     
     import pickle, os, datetime, matplotlib.pyplot as plt
 
@@ -99,13 +99,16 @@ def plot_and_save_statistics(logbook, output_dir="output", params=None):
         plt.title("Fitness over Generations\n"+str_params)
     else:
         plt.title("Fitness over Generations\n ")
-    plt.show()
-
+        
     # Save the figure in the output folder
     output_path = os.path.join(output_folder, 'min_vs_avg.png')
     fig.savefig(output_path, bbox_inches='tight')
 
+    # Save the results to a CSV file
+    df_results.to_csv(f'{output_folder}/results.csv', index=False)
+
 if __name__ == "__main__":
+    import pandas as pd
 
     # Define the problem as a minimization fitness problem
     creator.create("FitnessMin", base.Fitness, weights=(-1.0,))
@@ -122,7 +125,7 @@ if __name__ == "__main__":
 
     # Register the evaluation function and apply penalty for infeasibility
     toolbox.register("evaluate", pressure_vessel)
-    toolbox.decorate("evaluate", tools.DeltaPenalty(feasibility, delta=7.0, distance=distance))
+    toolbox.decorate("evaluate", tools.DeltaPenalty(feasibility, delta=0, distance=distance))
 
     # Statistics
     stats = tools.Statistics(lambda ind: ind.fitness.values)
@@ -137,32 +140,83 @@ if __name__ == "__main__":
 
     # Evolutionary Strategies (ES) Algorithm parameters
     MU, LAMBDA_ = 1000, 1000
-    MUTPB, NGEN = 0.8, 500
+    MUTPB, NGEN = 0.8, 50
     ELITISM_RATIO = 0.1
     ELITISM = int(LAMBDA_*ELITISM_RATIO)
 
     # Initial population
     pop = toolbox.population(n=MU)
 
-    # Evolutionary process and logging
-    pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA_,
-                                            cxpb=0, mutpb=MUTPB, ngen=NGEN, stats=stats,
-                                            halloffame=tools.HallOfFame(ELITISM, lambda x, y: (x == y).all()), verbose=True)
-    # Display results
-    print("Best individual after", NGEN, "generations:")
-    best_ind = tools.selBest(pop, 1)[0]
-    print("Fitness value (Min):", best_ind.fitness.values[0])
-    arr_fitness = [ind.fitness.values[0] for ind in pop]
-    arr_fitness = [x for x in arr_fitness if x < 100000000]
-    print("Fitness value (Mean):", np.mean(arr_fitness))
-    print("Fitness value (Median):", np.median(arr_fitness))
-    print("Fitness value (Worst):", np.max(arr_fitness))
-    print("Number of feasible individuals:", len(arr_fitness))
-    print("Number of infeasible individuals:", len(pop) - len(arr_fitness))
-    print("Standard deviation:", np.std(arr_fitness))
-    print("Number of unique individuals:", len(np.unique(arr_fitness)))
-    print("Individual variables:", best_ind)
-    print("Constraints:", constraints(best_ind))
+    # Define the number of times the experiment is to be run
+    N_EXPERIMENTS = 2  # Replace 'N' with the desired number of experiments
 
-    # Plot statistics
-    plot_and_save_statistics(logbook, params={"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO})
+    # List to store the results of each experiment
+    all_experiments_results = []
+
+    for experiment in range(N_EXPERIMENTS):
+        print(f"\n\nExperiment {experiment + 1} of {N_EXPERIMENTS}...\n")
+        # Evolutionary process and logging for each experiment
+        pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA_,
+                                                cxpb=0, mutpb=MUTPB, ngen=NGEN, stats=stats,
+                                                halloffame=tools.HallOfFame(ELITISM, lambda x, y: (x == y).all()), 
+                                                verbose=False)
+
+        # Analysis of results for each experiment
+        best_ind = tools.selBest(pop, 1)[0]
+        arr_fitness = [ind.fitness.values[0] for ind in pop]
+        arr_fitness = [x for x in arr_fitness if x < 100000000]
+        mean_fitness = np.mean(arr_fitness)
+        median_fitness = np.median(arr_fitness)
+        worst_fitness = np.max(arr_fitness)
+        std_dev = np.std(arr_fitness)
+        num_unique_individuals = len(np.unique(arr_fitness))
+        num_feasible = len(arr_fitness)
+        num_infeasible = len(pop) - len(arr_fitness)
+
+        # Store the results of this experiment
+        experiment_results = {
+            "Experiment": experiment + 1,
+            "Best Fitness": best_ind.fitness.values[0],
+            "Mean Fitness": mean_fitness,
+            "Median Fitness": median_fitness,
+            "Worst Fitness": worst_fitness,
+            "Standard Deviation": std_dev,
+            "Number of Unique Individuals": num_unique_individuals,
+            "Number of Feasible Individuals": num_feasible,
+            "Number of Infeasible Individuals": num_infeasible,
+            "Best Individual": best_ind,
+            "Constraints": constraints(best_ind),
+            "logbook": logbook,
+        }
+        all_experiments_results.append(experiment_results)
+
+        # Display results for each experiment
+        print("Best individual after", NGEN, "generations:")
+        print("Fitness value (Min):", best_ind.fitness.values[0])
+        print("Fitness value (Mean):", mean_fitness)
+        print("Fitness value (Median):", median_fitness)
+        print("Fitness value (Worst):", worst_fitness)
+        print("Number of feasible individuals:", num_feasible)
+        print("Number of infeasible individuals:", num_infeasible)
+        print("Standard deviation:", std_dev)
+        print("Number of unique individuals:", num_unique_individuals)
+        print("Individual variables:", best_ind)
+        print("Constraints:", constraints(best_ind))
+
+
+        # Plot statistics for each experiment
+        # plot_and_save_statistics(logbook, params={"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO})
+
+    # Convert the list of results to a DataFrame
+    df_results = pd.DataFrame(all_experiments_results).sort_values(by="Best Fitness")
+
+    ls_measures_cols = ['Best Fitness', 'Mean Fitness', 'Median Fitness', 'Worst Fitness', 'Standard Deviation', 'Number of Unique Individuals', 'Number of Feasible Individuals', 'Number of Infeasible Individuals']
+    print(df_results[ls_measures_cols].agg(['mean', 'std', 'min', 'max']).T)
+
+    print("\n\nBest individual after", NGEN, "generations:")
+    print(df_results.loc[0, :"Number of Infeasible Individuals"])
+    print("Best individual variables:", df_results.loc[0, "Best Individual"])
+    best_logbook = df_results.loc[0, "logbook"]
+    plot_and_save_statistics(best_logbook, df_results, params={"MU": MU, "LAMBDA": LAMBDA_, "MUTPB": MUTPB, 
+                                                               "NGEN": NGEN, "ELITISM_RATIO": ELITISM_RATIO})
+    # Save 
