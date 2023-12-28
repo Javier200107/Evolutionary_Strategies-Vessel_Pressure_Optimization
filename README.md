@@ -13,3 +13,13 @@ The following code has to be run from root folder in the project. The paths are 
 6. Output will be saved in `output/` folder
 7. Results are saved in `output/results.csv` file
 8. The progress involving population offspring over generations of the best experiment (minimum fitness value inidividual) is seralized in `output/logbook.pkl` file, which can be loaded using `pickle.load(file)`
+
+# Parameters
+- `--mu`: Number of individuals in the population
+- `--lambda_`: Number of offspring generated in each generation
+- `--mutpb`: Mutation probability
+- `--ngen`: Number of generations
+- `--elitism_ratio`: Ratio of individuals to be selected for the next generation (elitism)
+- `--tournament_size`: Size of the tournament for selection
+- `--n_experiments`: Number of experiments to run
+ 
