@@ -31,7 +31,16 @@ def constraints(individual):
     g3 = -np.pi*x3*x3*x4 - (4*np.pi/3)*x3*x3*x3 + 1296000
     g4 = x4 - 240
     g5 = - pressure_vessel(individual)[0]
-    return [g1, g2, g3, g4, g5]
+    g6 = 0.0625 - x1
+    g7 = 0.0625 - x2
+    g8 = x1 - 6.1875
+    g9 = x2 - 6.1875
+    g10 = x3 - 200
+    g11 = x4 - 200
+    g12 = 10 - x3
+    g13 = 10 - x4
+
+    return [g1, g2, g3, g4, g5, g6, g7, g8, g9, g10, g11, g12, g13]
 
 # Feasibility function
 def feasibility(individual):
@@ -81,15 +90,15 @@ def plot_and_save_statistics(logbook, df_results, output_dir="output", params=No
     line1 = ax1.plot(gen, fit_mins, "b-", label="Minimum Fitness")
     ax1.set_xlabel("Generation")
     ax1.set_ylabel("Fitness", color="b")
-    for tl in ax1.get_yticklabels():
-        tl.set_color("b")  
+    # for tl in ax1.get_yticklabels():
+    #     tl.set_color("b")  
     # Use log scale for y-axis
-    ax1.set_yscale('log')
+    # ax1.set_yscale('log')
 
     ax2 = ax1
     line2 = ax2.plot(gen, size_avgs, "r-", label="Average Fitness")
     # Use log scale for y-axis
-    ax2.set_yscale('log')
+    # ax2.set_yscale('log')
 
     lns = line1 + line2
     labs = [l.get_label() for l in lns]
@@ -117,6 +126,20 @@ def plot_and_save_statistics(logbook, df_results, output_dir="output", params=No
     plt.tight_layout()
     # Save the figure in the output folder
     output_path = os.path.join(output_folder, 'boxplot.png')
+    plt.savefig(output_path, bbox_inches='tight')
+
+    # boxplot for experiment time
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    ax.boxplot(df_results["Experiment Time"], labels=["Experiment Time"])
+    ax.set_title("Boxplot of Experiment Time")
+    ax.set_ylabel("Time (s)")
+
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+
+    # Save the figure in the output folder
+    output_path = os.path.join(output_folder, 'boxplot_time.png')
     plt.savefig(output_path, bbox_inches='tight')
 
     # Save the results to a CSV file
@@ -199,10 +222,14 @@ if __name__ == "__main__":
 
         print(f"\n\nExperiment {experiment + 1} of {N_EXPERIMENTS}...\n")
         # Evolutionary process and logging for each experiment
+        # get time
+        import time
+        start_time = time.time()
         pop, logbook = algorithms.eaMuCommaLambda(pop, toolbox, mu=MU, lambda_=LAMBDA_,
                                                 cxpb=0, mutpb=MUTPB, ngen=NGEN, stats=stats,
                                                 halloffame=tools.HallOfFame(ELITISM, lambda x, y: (x == y).all()), 
                                                 verbose=False)
+        experiment_time = time.time() - start_time
 
         # Analysis of results for each experiment
         best_ind = tools.selBest(pop, 1)[0]
@@ -230,6 +257,7 @@ if __name__ == "__main__":
             "Median Fitness": median_fitness,
             "Worst Fitness": worst_fitness,
             "Standard Deviation": std_dev,
+            "Experiment Time": experiment_time,
             "Number of Unique Individuals": num_unique_individuals,
             "Number of Feasible Individuals": num_feasible,
             "Number of Infeasible Individuals": num_infeasible,
@@ -250,6 +278,7 @@ if __name__ == "__main__":
         print("Standard deviation:", std_dev)
         print("Number of unique individuals:", num_unique_individuals)
         print("Individual variables:", best_ind)
+        print("Experiment time:", experiment_time)
         print("Constraints:", constraints(best_ind))
 
         # Plot statistics for each experiment
