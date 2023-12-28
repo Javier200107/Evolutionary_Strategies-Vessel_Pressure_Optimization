@@ -159,7 +159,7 @@ if __name__ == "__main__":
     ELITISM = int(LAMBDA_ * ELITISM_RATIO)
 
     # Example usage in the terminal:
-    # python script_name.py --mu 1000 --lambda_ 1000 --mutpb 0.8 --ngen 50 --elitism_ratio 0.1 --tournament_size 10 --n_experiments 3
+    # python evolution_strategies.py --mu 1000 --lambda_ 1000 --mutpb 0.8 --ngen 50 --elitism_ratio 0.1 --tournament_size 10 --n_experiments 3
 
 
     # Define the problem as a minimization fitness problem
